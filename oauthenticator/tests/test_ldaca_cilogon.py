@@ -456,5 +456,6 @@ async def test_failed_group_auth(ldaca_cilogon_client):
     handler = ldaca_cilogon_client.handler_for_user(
         user_model(username='wash')
     )
-    with raises(HTTPError):
+    with raises(HTTPError, match='HTTP 403: Forbidden \(User is not a member of a permitted CILogon group\)'):
         user_info = await authenticator.authenticate(handler)
+
