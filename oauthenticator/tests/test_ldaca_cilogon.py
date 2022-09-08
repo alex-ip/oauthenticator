@@ -21,13 +21,26 @@ def user_model(username):
             "OIDC mgrs",
             "CO:members:active"
         ],
-        "eduPersonOrcid": "http://orcid.org/0000-0001-8937-8904",
     }
 
 
 def alternative_user_model(username, claimname, **kwargs):
     """Return a user model with alternate claim name"""
-    return {claimname: username,
+    return {
+        claimname: username,
+        "isMemberOf": [
+            "CO:members:all",
+            "CO:admins",
+            "OIDC mgrs",
+            "CO:members:active"
+        ],
+        **kwargs
+    }
+
+
+def orcid_user_model(**kwargs):
+    """Return a user model with eduPersonOrcid attribute """
+    return {
         "isMemberOf": [
             "CO:members:all",
             "CO:admins",
@@ -35,7 +48,7 @@ def alternative_user_model(username, claimname, **kwargs):
             "CO:members:active"
         ],
         "eduPersonOrcid": "http://orcid.org/0000-0001-8937-8904",
-        ** kwargs
+        **kwargs
     }
 
 
@@ -429,3 +442,33 @@ async def test_allowed_domains_no_stripping(ldaca_cilogon_client):
     user_info = await authenticator.authenticate(handler)
     name = user_info['name']
     assert name == 'jtkirk@pink.org'
+
+
+async def test_orcid_auth(ldaca_cilogon_client):
+    """Tests creation of fake email address from ORCID URL"""
+    authenticator = LDaCACILogonOAuthenticator(username_claim='email', additional_username_claims=['eduPersonOrcid'])
+    handler = ldaca_cilogon_client.handler_for_user(
+        orcid_user_model()
+    )
+    user_info = await authenticator.authenticate(handler)
+    print(json.dumps(user_info, sort_keys=True, indent=4))
+    name = user_info['name']
+    assert name == '0000-0001-8937-8904@orcid.org'
+    auth_state = user_info['auth_state']
+    assert 'access_token' in auth_state
+    assert 'token_response' in auth_state
+    assert auth_state == {
+        'access_token': auth_state['access_token'],
+        'cilogon_user': orcid_user_model(),
+        'token_response': auth_state['token_response'],
+    }
+
+
+async def test_failed_group_auth(ldaca_cilogon_client):
+    """Tests for failed group authorisation"""
+    authenticator = LDaCACILogonOAuthenticator(allowed_cilogon_groups=['some group'])
+    handler = ldaca_cilogon_client.handler_for_user(
+        user_model(username='wash')
+    )
+    with raises(HTTPError):
+        user_info = await authenticator.authenticate(handler)
