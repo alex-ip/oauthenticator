@@ -54,7 +54,8 @@ class LDaCACILogonOAuthenticator(CILogonOAuthenticator):
 
     allowed_cilogon_groups = List(
         Unicode(),
-        default_value=["CO:members:all"],
+        # default_value=["CO:members:all"],  # Basic group membership required
+        default_value=[],  # No group membership required
         config=True,
         help="""A list of permitted CILogon groups in the "isMemberOf" field.
         """,
@@ -70,7 +71,7 @@ class LDaCACILogonOAuthenticator(CILogonOAuthenticator):
             userdict["name"] = f'{orcid_match.group(2)}@{orcid_match.group(1)}'
 
         isMemberOf = userdict["auth_state"]['cilogon_user'].get("isMemberOf", [])
-        if not set(self.allowed_cilogon_groups) & set(isMemberOf):
+        if self.allowed_cilogon_groups and not (set(self.allowed_cilogon_groups) & set(isMemberOf)):
             self.log.error(
                 f"User is not a member of a permitted CILogon group {self.allowed_cilogon_groups}",
             )

@@ -15,12 +15,6 @@ def user_model(username):
     """Return a user model"""
     return {
         'eppn': username + '@serenity.space',
-        "isMemberOf": [
-            "CO:members:all",
-            "CO:admins",
-            "OIDC mgrs",
-            "CO:members:active"
-        ],
     }
 
 
@@ -28,12 +22,6 @@ def alternative_user_model(username, claimname, **kwargs):
     """Return a user model with alternate claim name"""
     return {
         claimname: username,
-        "isMemberOf": [
-            "CO:members:all",
-            "CO:admins",
-            "OIDC mgrs",
-            "CO:members:active"
-        ],
         **kwargs
     }
 
@@ -450,6 +438,37 @@ async def test_orcid_auth(ldaca_cilogon_client):
     }
 
 
+async def test_group_auth(ldaca_cilogon_client):
+    """Tests valid user with required group membership"""
+    authenticator = LDaCACILogonOAuthenticator(allowed_cilogon_groups=["CO:members:active"])
+    handler = ldaca_cilogon_client.handler_for_user(
+        alternative_user_model('wash@serenity.space', 'eppn',
+                               isMemberOf=[
+                                   "CO:members:all",
+                                   "CO:admins",
+                                   "OIDC mgrs",
+                                   "CO:members:active"
+                               ])
+    )
+    user_info = await authenticator.authenticate(handler)
+    print(json.dumps(user_info, sort_keys=True, indent=4))
+    name = user_info['name']
+    assert name == 'wash@serenity.space'
+    auth_state = user_info['auth_state']
+    assert 'access_token' in auth_state
+    assert 'token_response' in auth_state
+    assert auth_state == {
+        'access_token': auth_state['access_token'],
+        'cilogon_user': alternative_user_model('wash@serenity.space', 'eppn', isMemberOf=[
+            "CO:members:all",
+            "CO:admins",
+            "OIDC mgrs",
+            "CO:members:active"
+        ]),
+        'token_response': auth_state['token_response'],
+    }
+
+
 async def test_failed_group_auth(ldaca_cilogon_client):
     """Tests for failed group authorisation"""
     authenticator = LDaCACILogonOAuthenticator(allowed_cilogon_groups=['some group'])
@@ -459,3 +478,20 @@ async def test_failed_group_auth(ldaca_cilogon_client):
     with raises(HTTPError, match='HTTP 403: Forbidden \(User is not a member of a permitted CILogon group\)'):
         user_info = await authenticator.authenticate(handler)
 
+
+async def test_no_group_auth(ldaca_cilogon_client):
+    """Tests valid user with no required group membership"""
+    authenticator = LDaCACILogonOAuthenticator(allowed_cilogon_groups=[])
+    handler = ldaca_cilogon_client.handler_for_user(user_model('wash'))
+    user_info = await authenticator.authenticate(handler)
+    print(json.dumps(user_info, sort_keys=True, indent=4))
+    name = user_info['name']
+    assert name == 'wash@serenity.space'
+    auth_state = user_info['auth_state']
+    assert 'access_token' in auth_state
+    assert 'token_response' in auth_state
+    assert auth_state == {
+        'access_token': auth_state['access_token'],
+        'cilogon_user': user_model('wash'),
+        'token_response': auth_state['token_response'],
+    }
