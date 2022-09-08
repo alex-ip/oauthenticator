@@ -38,20 +38,6 @@ def alternative_user_model(username, claimname, **kwargs):
     }
 
 
-def orcid_user_model(**kwargs):
-    """Return a user model with eduPersonOrcid attribute """
-    return {
-        "isMemberOf": [
-            "CO:members:all",
-            "CO:admins",
-            "OIDC mgrs",
-            "CO:members:active"
-        ],
-        "eduPersonOrcid": "http://orcid.org/0000-0001-8937-8904",
-        **kwargs
-    }
-
-
 @fixture
 def ldaca_cilogon_client(client):
     setup_oauth_mock(
@@ -448,7 +434,7 @@ async def test_orcid_auth(ldaca_cilogon_client):
     """Tests creation of fake email address from ORCID URL"""
     authenticator = LDaCACILogonOAuthenticator(username_claim='email', additional_username_claims=['eduPersonOrcid'])
     handler = ldaca_cilogon_client.handler_for_user(
-        orcid_user_model()
+        alternative_user_model("http://orcid.org/0000-0001-8937-8904", "eduPersonOrcid")
     )
     user_info = await authenticator.authenticate(handler)
     print(json.dumps(user_info, sort_keys=True, indent=4))
@@ -459,7 +445,7 @@ async def test_orcid_auth(ldaca_cilogon_client):
     assert 'token_response' in auth_state
     assert auth_state == {
         'access_token': auth_state['access_token'],
-        'cilogon_user': orcid_user_model(),
+        'cilogon_user': alternative_user_model("http://orcid.org/0000-0001-8937-8904", "eduPersonOrcid"),
         'token_response': auth_state['token_response'],
     }
 
