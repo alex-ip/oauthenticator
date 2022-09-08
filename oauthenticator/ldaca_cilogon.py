@@ -47,7 +47,7 @@ class LDaCACILogonOAuthenticator(CILogonOAuthenticator):
         """
         additional_username_claims = proposal.value
 
-        if 'openid' not in proposal.value:
+        if 'eduPersonOrcid' not in proposal.value:
             additional_username_claims += ["eduPersonOrcid"]
 
         return additional_username_claims
