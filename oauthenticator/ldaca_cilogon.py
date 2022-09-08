@@ -62,7 +62,7 @@ class LDaCACILogonOAuthenticator(CILogonOAuthenticator):
 
     async def authenticate(self, handler, data=None):
         # Call CILogonOAuthenticator.authenticate()
-        userdict = await super().authenticate(self, handler, data)
+        userdict = await super().authenticate(handler, data)
 
         # Make fake email address from ORCID URL
         # Need to have "eduPersonOrcid" in hub.config.LdaCACILogonOAuthenticator.additional_username_claims
